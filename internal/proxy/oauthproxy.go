@@ -185,8 +185,11 @@ func newUpstreamTransport(insecureSkipVerify bool) *upstreamTransport {
 // NewReverseProxy creates a reverse proxy to a specified url.
 // It adds an X-Forwarded-Host header that is the request's host.
 func NewReverseProxy(to *url.URL, config *UpstreamConfig) *httputil.ReverseProxy {
+	logger := log.NewLogEntry().WithRequestHost(to.Host)
+
 	proxy := httputil.NewSingleHostReverseProxy(to)
 	proxy.Transport = newUpstreamTransport(config.TLSSkipVerify)
+	proxy.ErrorLog = logger
 	director := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		req.Header.Add("X-Forwarded-Host", req.Host)
@@ -202,8 +205,11 @@ func NewReverseProxy(to *url.URL, config *UpstreamConfig) *httputil.ReverseProxy
 // urls on the fly based on a from regex and a templated to field.
 // It adds an X-Forwarded-Host header to the the upstream's request.
 func NewRewriteReverseProxy(route *RewriteRoute, config *UpstreamConfig) *httputil.ReverseProxy {
+	logger := log.NewLogEntry().WithRewriteRoute(route)
+
 	proxy := &httputil.ReverseProxy{}
 	proxy.Transport = newUpstreamTransport(config.TLSSkipVerify)
+	proxy.ErrorLog = logger
 	proxy.Director = func(req *http.Request) {
 		// we do this to rewrite requests
 		rewritten := route.FromRegex.ReplaceAllString(req.Host, route.ToTemplate.Opaque)
@@ -211,9 +217,8 @@ func NewRewriteReverseProxy(route *RewriteRoute, config *UpstreamConfig) *httput
 		// we use to favor scheme's used in the regex, else we use the default passed in via the template
 		target, err := urlParse(route.ToTemplate.Scheme, rewritten)
 		if err != nil {
-			logger := log.NewLogEntry()
 			// we aren't in an error handling context so we have to fake it(thanks stdlib!)
-			logger.WithRequestHost(req.Host).WithRewriteRoute(route).Error(
+			logger.WithRequestHost(req.Host).Error(
 				err, "unable to parse and replace rewrite url")
 			req.URL = nil // this will raise an error in http.RoundTripper
 			return
