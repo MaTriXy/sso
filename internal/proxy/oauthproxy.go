@@ -189,7 +189,6 @@ func (t *upstreamTransport) getTransport() *http.Transport {
 				DualStack: true,
 			}).DialContext,
 			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: t.insecureSkipVerify},
 			ExpectContinueTimeout: 1 * time.Second,
