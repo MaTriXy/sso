@@ -11,17 +11,8 @@ if [ -n "$res" ]; then
   exit 1
 fi
 
-git diff --exit-code 
-if [ "$?" -gt "0" ]; then
-  exit 1
-fi
-
 echo "running go mod vendor ..."
 go mod vendor
-git diff --exit-code
-if [ "$?" -gt "0" ]; then
-  exit 1
-fi
 
 echo "running golint ..."
 golint -set_exit_status cmd internal
